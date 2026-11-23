@@ -1,0 +1,59 @@
+name: Retrain
+
+on:
+  workflow_dispatch:  # manual, or dispatched by the drift monitor
+    inputs:
+      reason:
+        description: Why retraining was triggered
+        default: manual
+  schedule:
+    - cron: "0 3 * * 1"  # weekly, Monday 03:00 UTC
+
+permissions:
+  contents: write  # commit the new model pointer
+  id-token: write
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    outputs:
+      promoted: ${{ steps.promote.outputs.promoted }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Reason
+        run: echo "Retrain reason: ${{ inputs.reason || 'schedule' }}"
+      - name: Pull data + current production model
+        run: dvc remote default gcs && dvc pull
+      - name: Run pipeline (only changed stages rebuild)
+        run: dvc repro
+      - name: Promotion gate
+        id: promote
+        run: python -m src.registry.promote
+      - uses: actions/upload-artifact@v4
+        with:
+          name: retrain-reports
+          path: reports/
+      - name: Version promoted model
+        if: steps.promote.outputs.promoted == 'true'
+        run: |
+          dvc add models/model.joblib
+          dvc push
+          git config user.name "churnops-bot"
+          git config user.email "churnops-bot@users.noreply.github.com"
+          git add models/model.joblib.dvc dvc.lock reports/promotion.json reports/metrics.json reports/model_comparison.md
+          git commit -m "chore: promote model (${{ inputs.reason || 'schedule' }})"
+          git push
+
+  deploy:
+    needs: retrain
+    if: needs.retrain.outputs.promoted == 'true'
+    uses: ./.github/workflows/deploy.yml

@@ -1,0 +1,48 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_call:  # called by retrain.yml after a promotion
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write  # OIDC token for Workload Identity Federation
+
+env:
+  IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/churnops/api
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main  # after retrain, main holds the freshly promoted model pointer
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Pull production model from DVC (GCS)
+        run: |
+          pip install "dvc[gs]==3.58.0" "pathspec==0.12.1"
+          dvc remote default gcs
+          dvc pull models/model.joblib
+      - name: Build and push image
+        run: |
+          gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+          docker build -t $IMAGE:${{ github.sha }} .
+          docker push $IMAGE:${{ github.sha }}
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy churnops-api \
+            --image $IMAGE:${{ github.sha }} \
+            --region ${{ vars.GCP_REGION }} \
+            --allow-unauthenticated \
+            --memory 1Gi --max-instances 2 \
+            --set-secrets DATABASE_URL=churnops-database-url:latest

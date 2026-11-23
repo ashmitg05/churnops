@@ -19,3 +19,63 @@ validation:
 split:
   val_size: 0.15
   test_size: 0.15
+
+features:
+  tenure_bins: [0, 6, 12, 24, 48, 72]
+  new_customer_months: 6
+
+mlflow:
+  # Overridden by MLFLOW_TRACKING_URI env (docker-compose / remote server).
+  tracking_uri: sqlite:///mlflow.db
+  experiment: churnops
+  model_name: churnops
+
+train:
+  families: [logreg, random_forest, xgboost, lightgbm]
+  imbalance: [class_weight, smote]
+  optuna_trials: 50
+  cv_folds: 5
+  logreg: {C: 1.0, max_iter: 2000}
+  random_forest: {n_estimators: 400, max_depth: 8, min_samples_leaf: 5}
+  xgboost: {n_estimators: 400, max_depth: 4, learning_rate: 0.05, subsample: 0.9}
+  lightgbm: {n_estimators: 400, num_leaves: 15, learning_rate: 0.05, subsample: 0.9}
+
+cost:
+  # Business assumptions (not measured). Losing a churner vs cost of one retention offer.
+  churn_loss: 500.0
+  offer_cost: 50.0
+  threshold_grid_step: 0.01
+
+evaluate:
+  calibration_bins: 10
+  shap_sample: 500
+  top_k_explanations: 5
+
+promotion:
+  min_auc_gain: 0.005
+  min_positive_rate: 0.02
+  max_positive_rate: 0.98
+  latency_budget_ms: 100.0
+  latency_trials: 50
+  # Fairness sanity: ROC-AUC gap between gender groups on test set.
+  max_group_auc_gap: 0.05
+  group_column: gender
+
+serving:
+  model_path: models/model.joblib
+  candidate_path: models/candidate.joblib
+  background_rows: 100
+  max_batch: 1000
+
+monitoring:
+  window: 500
+  # Share of the 19 input columns that must drift. 0.2 = ~4 columns.
+  drift_share_threshold: 0.2
+  stattest_threshold: 0.05
+  retrain_workflow: retrain.yml
+
+simulate:
+  month_to_month_share: 0.8
+  charge_multiplier: 1.25
+  electronic_check_share: 0.6
+  tenure_multiplier: 0.5

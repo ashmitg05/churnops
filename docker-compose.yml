@@ -1,0 +1,36 @@
+# Local stack: MLflow tracking server + Postgres (prediction logs) + API + dashboard.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: churnops
+      POSTGRES_PASSWORD: churnops   # local-only dev credential
+      POSTGRES_DB: churnops
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "churnops"]
+      interval: 5s
+      retries: 10
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.19.0
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:////mlflow/mlflow.db --artifacts-destination /mlflow/artifacts
+    volumes: ["./mlflow-data:/mlflow"]
+    ports: ["5000:5000"]
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://churnops:churnops@postgres:5432/churnops
+      PORT: "8000"
+    ports: ["8000:8000"]
+    depends_on:
+      postgres: {condition: service_healthy}
+  dashboard:
+    image: python:3.11-slim
+    working_dir: /app
+    command: sh -c "pip install -q streamlit==1.41.1 requests pandas sqlalchemy psycopg[binary] pyyaml && streamlit run dashboard/app.py --server.address 0.0.0.0"
+    environment:
+      API_URL: http://api:8000
+      DATABASE_URL: postgresql://churnops:churnops@postgres:5432/churnops
+    volumes: [".:/app"]
+    ports: ["8501:8501"]
+    depends_on: [api]

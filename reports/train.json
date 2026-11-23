@@ -1,0 +1,129 @@
+{
+  "best": {
+    "family": "logreg",
+    "imbalance": "class_weight",
+    "params": {
+      "C": 0.04054544520480108,
+      "max_iter": 2000
+    },
+    "run_id": "0018d4169fa84ed7800b4df1ab91fd2f",
+    "registry_version": "1",
+    "trained_at": "2026-11-23T12:14:41+00:00",
+    "val_metrics": {
+      "val_roc_auc": 0.834560846754962,
+      "val_pr_auc": 0.641752903069161,
+      "val_precision": 0.35180412371134023,
+      "val_recall": 0.9715302491103203,
+      "val_f1": 0.5165562913907285,
+      "val_brier": 0.16569959511135418,
+      "val_threshold": 0.13,
+      "val_cost_per_customer": 40.491958372753075
+    }
+  },
+  "comparison": [
+    {
+      "family": "logreg",
+      "imbalance": "class_weight",
+      "val_roc_auc": 0.8351799537733426,
+      "val_pr_auc": 0.6439398555304107,
+      "val_precision": 0.35602094240837695,
+      "val_recall": 0.9679715302491103,
+      "val_f1": 0.5205741626794258,
+      "val_brier": 0.16587652566408737,
+      "val_threshold": 0.13,
+      "val_cost_per_customer": 40.397350993377486,
+      "run_id": "c082a233ba724d799bfa3bd1ca26f11d"
+    },
+    {
+      "family": "logreg",
+      "imbalance": "smote",
+      "val_roc_auc": 0.8344140954617162,
+      "val_pr_auc": 0.6434802156546012,
+      "val_precision": 0.3771186440677966,
+      "val_recall": 0.9501779359430605,
+      "val_f1": 0.5399393326592518,
+      "val_brier": 0.16408760165980837,
+      "val_threshold": 0.16,
+      "val_cost_per_customer": 40.113528855250706,
+      "run_id": "0beb01f4c4c6459b83e65291b826fc85"
+    },
+    {
+      "family": "random_forest",
+      "imbalance": "class_weight",
+      "val_roc_auc": 0.8303234031624903,
+      "val_pr_auc": 0.6266567849680812,
+      "val_precision": 0.34815756035578144,
+      "val_recall": 0.9750889679715302,
+      "val_f1": 0.5131086142322098,
+      "val_brier": 0.16006633654742572,
+      "val_threshold": 0.12,
+      "val_cost_per_customer": 40.53926206244087,
+      "run_id": "675fbff0b576470aa062bbfdf955a8c0"
+    },
+    {
+      "family": "random_forest",
+      "imbalance": "smote",
+      "val_roc_auc": 0.8316533367575302,
+      "val_pr_auc": 0.6199960271738654,
+      "val_precision": 0.3504492939666239,
+      "val_recall": 0.9715302491103203,
+      "val_f1": 0.5150943396226415,
+      "val_brier": 0.152629906900171,
+      "val_threshold": 0.1,
+      "val_cost_per_customer": 40.633869441816465,
+      "run_id": "4c2a844a8f9a41f08d0d32a0c91c60e8"
+    },
+    {
+      "family": "xgboost",
+      "imbalance": "class_weight",
+      "val_roc_auc": 0.8230546281689107,
+      "val_pr_auc": 0.6166983856769669,
+      "val_precision": 0.3876651982378855,
+      "val_recall": 0.9395017793594306,
+      "val_f1": 0.5488565488565489,
+      "val_brier": 0.1631157617500211,
+      "val_threshold": 0.12,
+      "val_cost_per_customer": 40.255439924314096,
+      "run_id": "5269e25c68654bf78d936cd677259a27"
+    },
+    {
+      "family": "xgboost",
+      "imbalance": "smote",
+      "val_roc_auc": 0.83055040906923,
+      "val_pr_auc": 0.6345814271703678,
+      "val_precision": 0.40625,
+      "val_recall": 0.9252669039145908,
+      "val_f1": 0.5646036916395223,
+      "val_brier": 0.1426539846255233,
+      "val_threshold": 0.1,
+      "val_cost_per_customer": 40.2081362346263,
+      "run_id": "9eda12088c4743f19d8f15744c9f84f5"
+    },
+    {
+      "family": "lightgbm",
+      "imbalance": "class_weight",
+      "val_roc_auc": 0.824423542576219,
+      "val_pr_auc": 0.6164861620552179,
+      "val_precision": 0.39002932551319647,
+      "val_recall": 0.9466192170818505,
+      "val_f1": 0.5524402907580478,
+      "val_brier": 0.16180108332802537,
+      "val_threshold": 0.11,
+      "val_cost_per_customer": 39.356669820245976,
+      "run_id": "27c05c843afc454aa0b33559a8ec3512"
+    },
+    {
+      "family": "lightgbm",
+      "imbalance": "smote",
+      "val_roc_auc": 0.8234215064020252,
+      "val_pr_auc": 0.6136038791332844,
+      "val_precision": 0.36662106703146374,
+      "val_recall": 0.9537366548042705,
+      "val_f1": 0.5296442687747036,
+      "val_brier": 0.14675255901788947,
+      "val_threshold": 0.05,
+      "val_cost_per_customer": 40.728476821192054,
+      "run_id": "031a11eed6604eee83d1c086d18585f3"
+    }
+  ]
+}

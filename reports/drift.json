@@ -1,0 +1,16 @@
+{
+  "share_drifted": 0.2631578947368421,
+  "n_drifted": 5,
+  "drifted_columns": [
+    "Contract",
+    "MonthlyCharges",
+    "PaymentMethod",
+    "TotalCharges",
+    "tenure"
+  ],
+  "n_current": 500,
+  "mean_predicted_churn": 0.5824867815284792,
+  "drift_detected": true,
+  "checked_at": "2026-11-23T12:19:05+00:00",
+  "retrain_triggered": false
+}

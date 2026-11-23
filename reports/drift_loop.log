@@ -1,0 +1,53 @@
+$ python -m src.monitoring.simulate_drift --api http://localhost:8001 --n 500 --no-drift
+sent 500 (control); mean predicted churn=0.404
+$ python -m src.monitoring.drift
+{
+  "share_drifted": 0.05263157894736842,
+  "n_drifted": 1,
+  "drifted_columns": [
+    "tenure"
+  ],
+  "n_current": 500,
+  "mean_predicted_churn": 0.4037731086595235,
+  "drift_detected": false,
+  "checked_at": "2026-11-23T12:18:19+00:00"
+}
+$ python -m src.monitoring.simulate_drift --api http://localhost:8001 --n 500
+sent 500 (drifted); mean predicted churn=0.582
+$ python -m src.monitoring.drift
+GITHUB_TOKEN/GITHUB_REPOSITORY not set; skipping dispatch
+{
+  "share_drifted": 0.2631578947368421,
+  "n_drifted": 5,
+  "drifted_columns": [
+    "Contract",
+    "MonthlyCharges",
+    "PaymentMethod",
+    "TotalCharges",
+    "tenure"
+  ],
+  "n_current": 500,
+  "mean_predicted_churn": 0.5824867815284792,
+  "drift_detected": true,
+  "checked_at": "2026-11-23T12:19:05+00:00",
+  "retrain_triggered": false
+}
+$ dvc repro
+Stage 'ingest' didn't change, skipping
+Stage 'validate' didn't change, skipping
+Stage 'split' didn't change, skipping
+Running stage 'featurize':
+> python -m src.features.featurize
+train: (4929, 28)
+val: (1057, 28)
+test: (1057, 28)
+Updating lock file 'dvc.lock'
+Stage 'train' didn't change, skipping
+Stage 'evaluate' didn't change, skipping
+To track the changes with git, run:
+	git add dvc.lock
+To enable auto staging, run:
+	dvc config core.autostage true
+Use `dvc push` to send your updates to remote storage.
+$ python -m src.registry.promote
+promoted=False: ROC-AUC gain +0.0000 < required +0.0050

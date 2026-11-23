@@ -6,10 +6,45 @@ stages:
     outs: [data/raw/telco.csv]
   validate:
     cmd: python -m src.data.validate
-    deps: [src/data/validate.py, data/raw/telco.csv]
+    deps: [src/data/validate.py, src/data/schema.py, data/raw/telco.csv]
     params: [validation]
   split:
     cmd: python -m src.data.split
-    deps: [src/data/split.py, src/data/validate.py, data/raw/telco.csv]
+    deps: [src/data/split.py, src/data/validate.py, src/data/schema.py, data/raw/telco.csv]
     params: [seed, split]
     outs: [data/processed]
+  featurize:
+    cmd: python -m src.features.featurize
+    deps: [src/features, data/processed]
+    params: [features]
+    outs: [data/features]
+  train:
+    cmd: python -m src.train.train
+    deps: [src/train/train.py, src/train/models.py, src/train/metrics.py, src/features/build.py,
+      data/processed]
+    params: [seed, features, train, cost, serving.background_rows]
+    outs:
+      - models/candidate.joblib
+      - reports/optuna_trials.csv:
+          cache: false
+      - reports/train.json:
+          cache: false
+  evaluate:
+    cmd: python -m src.train.evaluate
+    deps: [src/train/evaluate.py, src/explain.py, models/candidate.joblib, data/processed]
+    params: [evaluate, cost]
+    metrics:
+      - reports/metrics.json:
+          cache: false
+    plots:
+      - reports/calibration.png:
+          cache: false
+      - reports/cost_curve.png:
+          cache: false
+      - reports/confusion_matrix.png:
+          cache: false
+      - reports/shap_summary.png:
+          cache: false
+    outs:
+      - reports/model_comparison.md:
+          cache: false

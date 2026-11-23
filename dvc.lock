@@ -23,10 +23,14 @@ stages:
       hash: md5
       md5: 3b0bfab28a8101b4e4fdd08025a5c235
       size: 970457
+    - path: src/data/schema.py
+      hash: md5
+      md5: 3d65d0b7d67164da0b38a6670ede02c6
+      size: 1011
     - path: src/data/validate.py
       hash: md5
-      md5: 88683f9e52dcd3b0a0eec6dc111f011e
-      size: 3286
+      md5: 0badb224f1616d5548757bdc8f0acc7c
+      size: 2342
     params:
       params.yaml:
         validation:
@@ -43,14 +47,18 @@ stages:
       hash: md5
       md5: 3b0bfab28a8101b4e4fdd08025a5c235
       size: 970457
+    - path: src/data/schema.py
+      hash: md5
+      md5: 3d65d0b7d67164da0b38a6670ede02c6
+      size: 1011
     - path: src/data/split.py
       hash: md5
       md5: 2c28a8312add17a6ee8573c11e95141c
       size: 1270
     - path: src/data/validate.py
       hash: md5
-      md5: 88683f9e52dcd3b0a0eec6dc111f011e
-      size: 3286
+      md5: 0badb224f1616d5548757bdc8f0acc7c
+      size: 2342
     params:
       params.yaml:
         seed: 42
@@ -63,3 +71,170 @@ stages:
       md5: ae12459e6be1c978644023a4bb683ba0.dir
       size: 226099
       nfiles: 3
+  featurize:
+    cmd: python -m src.features.featurize
+    deps:
+    - path: data/processed
+      hash: md5
+      md5: ae12459e6be1c978644023a4bb683ba0.dir
+      size: 226099
+      nfiles: 3
+    - path: src/features
+      hash: md5
+      md5: 6ca260148b7a69b0bb8c022567496121.dir
+      size: 11529
+      nfiles: 5
+    params:
+      params.yaml:
+        features:
+          tenure_bins:
+          - 0
+          - 6
+          - 12
+          - 24
+          - 48
+          - 72
+          new_customer_months: 6
+    outs:
+    - path: data/features
+      hash: md5
+      md5: e278c54dab35020d1d85c6942f7371ab.dir
+      size: 266087
+      nfiles: 3
+  train:
+    cmd: python -m src.train.train
+    deps:
+    - path: data/processed
+      hash: md5
+      md5: ae12459e6be1c978644023a4bb683ba0.dir
+      size: 226099
+      nfiles: 3
+    - path: src/features/build.py
+      hash: md5
+      md5: 7a456e00d7b5209e8e655249bb37381b
+      size: 4137
+    - path: src/train/metrics.py
+      hash: md5
+      md5: ca980f3696b594be100e99dcabc87e00
+      size: 3462
+    - path: src/train/models.py
+      hash: md5
+      md5: 9c917fa85c82ebc378301561e50e18b7
+      size: 3153
+    - path: src/train/train.py
+      hash: md5
+      md5: d4b86b89b078590f4284c1bc7f21fc45
+      size: 6157
+    params:
+      params.yaml:
+        cost:
+          churn_loss: 500.0
+          offer_cost: 50.0
+          threshold_grid_step: 0.01
+        features:
+          tenure_bins:
+          - 0
+          - 6
+          - 12
+          - 24
+          - 48
+          - 72
+          new_customer_months: 6
+        seed: 42
+        serving.background_rows: 100
+        train:
+          families:
+          - logreg
+          - random_forest
+          - xgboost
+          - lightgbm
+          imbalance:
+          - class_weight
+          - smote
+          optuna_trials: 50
+          cv_folds: 5
+          logreg:
+            C: 1.0
+            max_iter: 2000
+          random_forest:
+            n_estimators: 400
+            max_depth: 8
+            min_samples_leaf: 5
+          xgboost:
+            n_estimators: 400
+            max_depth: 4
+            learning_rate: 0.05
+            subsample: 0.9
+          lightgbm:
+            n_estimators: 400
+            num_leaves: 15
+            learning_rate: 0.05
+            subsample: 0.9
+    outs:
+    - path: models/candidate.joblib
+      hash: md5
+      md5: 4e9f397ca7fdc2a193fc9bbb52dcef6f
+      size: 19602
+    - path: reports/optuna_trials.csv
+      hash: md5
+      md5: 301926854b9af395222e16fb7e5fa698
+      size: 6504
+    - path: reports/train.json
+      hash: md5
+      md5: d7dfea7f84cc67aa40ace1f8b11f0bc9
+      size: 4308
+  evaluate:
+    cmd: python -m src.train.evaluate
+    deps:
+    - path: data/processed
+      hash: md5
+      md5: ae12459e6be1c978644023a4bb683ba0.dir
+      size: 226099
+      nfiles: 3
+    - path: models/candidate.joblib
+      hash: md5
+      md5: 4e9f397ca7fdc2a193fc9bbb52dcef6f
+      size: 19602
+    - path: src/explain.py
+      hash: md5
+      md5: c6d14c73558af9d8aae0e9a22b4824df
+      size: 3983
+    - path: src/train/evaluate.py
+      hash: md5
+      md5: 7330537f50443cff2f937dee67235009
+      size: 3400
+    params:
+      params.yaml:
+        cost:
+          churn_loss: 500.0
+          offer_cost: 50.0
+          threshold_grid_step: 0.01
+        evaluate:
+          calibration_bins: 10
+          shap_sample: 500
+          top_k_explanations: 5
+    outs:
+    - path: reports/calibration.png
+      hash: md5
+      md5: 56960a9d12ea51ebbc822c8f258bbd02
+      size: 31327
+    - path: reports/confusion_matrix.png
+      hash: md5
+      md5: ff8037355099d30d866663b3297cca3c
+      size: 60944
+    - path: reports/cost_curve.png
+      hash: md5
+      md5: 8ec97e425e9c166e185862533ba23465
+      size: 32104
+    - path: reports/metrics.json
+      hash: md5
+      md5: 7c04579500bef310d510335a04c85f12
+      size: 306
+    - path: reports/model_comparison.md
+      hash: md5
+      md5: f97e50de5368728f9214d060bbc6f5f0
+      size: 1139
+    - path: reports/shap_summary.png
+      hash: md5
+      md5: ff8037355099d30d866663b3297cca3c
+      size: 60944

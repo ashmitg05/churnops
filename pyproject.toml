@@ -15,6 +15,8 @@ select = ["E", "F", "I", "B", "UP"]
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
+# numpy ndarray generics add noise without catching bugs here
+disable_error_code = ["type-arg"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

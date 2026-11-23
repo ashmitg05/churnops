@@ -1,0 +1,11 @@
+.venv
+.git
+data
+mlruns
+mlflow.db
+*.db
+reports
+notebooks
+dashboard
+tests
+models/candidate.joblib

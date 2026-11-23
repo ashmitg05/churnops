@@ -1,0 +1,69 @@
+{
+  "promoted": false,
+  "reason": "ROC-AUC gain +0.0000 < required +0.0050",
+  "decided_at": "2026-11-23T12:21:12+00:00",
+  "candidate": {
+    "meta": {
+      "family": "logreg",
+      "imbalance": "class_weight",
+      "params": {
+        "C": 0.04054544520480108,
+        "max_iter": 2000
+      },
+      "run_id": "0018d4169fa84ed7800b4df1ab91fd2f",
+      "registry_version": "1",
+      "trained_at": "2026-11-23T12:14:41+00:00",
+      "val_metrics": {
+        "val_roc_auc": 0.834560846754962,
+        "val_pr_auc": 0.641752903069161,
+        "val_precision": 0.35180412371134023,
+        "val_recall": 0.9715302491103203,
+        "val_f1": 0.5165562913907285,
+        "val_brier": 0.16569959511135418,
+        "val_threshold": 0.13,
+        "val_cost_per_customer": 40.491958372753075
+      }
+    },
+    "roc_auc": 0.8540747380033094,
+    "positive_rate": 0.7313150425733207,
+    "group_auc": {
+      "Female": 0.8530381535562882,
+      "Male": 0.8551626934493252
+    },
+    "group_auc_gap": 0.0021245398930369586,
+    "latency_p95_ms": 9.803779999492685,
+    "failed": []
+  },
+  "production": {
+    "meta": {
+      "family": "logreg",
+      "imbalance": "class_weight",
+      "params": {
+        "C": 0.04054544520480108,
+        "max_iter": 2000
+      },
+      "run_id": "0018d4169fa84ed7800b4df1ab91fd2f",
+      "registry_version": "1",
+      "trained_at": "2026-11-23T12:14:41+00:00",
+      "val_metrics": {
+        "val_roc_auc": 0.834560846754962,
+        "val_pr_auc": 0.641752903069161,
+        "val_precision": 0.35180412371134023,
+        "val_recall": 0.9715302491103203,
+        "val_f1": 0.5165562913907285,
+        "val_brier": 0.16569959511135418,
+        "val_threshold": 0.13,
+        "val_cost_per_customer": 40.491958372753075
+      }
+    },
+    "roc_auc": 0.8540747380033094,
+    "positive_rate": 0.7313150425733207,
+    "group_auc": {
+      "Female": 0.8530381535562882,
+      "Male": 0.8551626934493252
+    },
+    "group_auc_gap": 0.0021245398930369586,
+    "latency_p95_ms": 8.040814980631694,
+    "failed": []
+  }
+}

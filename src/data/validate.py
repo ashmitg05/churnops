@@ -8,9 +8,7 @@ import pandera as pa
 from pandera import Check, Column
 
 from src.config import ROOT, load_params
-
-YES_NO = ["Yes", "No"]
-NO_INTERNET = ["Yes", "No", "No internet service"]
+from src.data.schema import CATEGORIES, YES_NO
 
 
 def load_raw(path: str) -> pd.DataFrame:
@@ -21,41 +19,18 @@ def load_raw(path: str) -> pd.DataFrame:
 
 
 def build_schema(v: dict[str, Any], target: str) -> pa.DataFrameSchema:
-    def cat(values: list[str]) -> Column:
-        return Column(str, Check.isin(values))
-
+    cats = {name: Column(str, Check.isin(values)) for name, values in CATEGORIES.items()}
     return pa.DataFrameSchema(
         {
             "customerID": Column(str, unique=True),
-            "gender": cat(["Male", "Female"]),
+            **cats,
             "SeniorCitizen": Column(int, Check.isin([0, 1])),
-            "Partner": cat(YES_NO),
-            "Dependents": cat(YES_NO),
             "tenure": Column(int, Check.in_range(0, v["tenure_max"])),
-            "PhoneService": cat(YES_NO),
-            "MultipleLines": cat(["Yes", "No", "No phone service"]),
-            "InternetService": cat(["DSL", "Fiber optic", "No"]),
-            "OnlineSecurity": cat(NO_INTERNET),
-            "OnlineBackup": cat(NO_INTERNET),
-            "DeviceProtection": cat(NO_INTERNET),
-            "TechSupport": cat(NO_INTERNET),
-            "StreamingTV": cat(NO_INTERNET),
-            "StreamingMovies": cat(NO_INTERNET),
-            "Contract": cat(["Month-to-month", "One year", "Two year"]),
-            "PaperlessBilling": cat(YES_NO),
-            "PaymentMethod": cat(
-                [
-                    "Electronic check",
-                    "Mailed check",
-                    "Bank transfer (automatic)",
-                    "Credit card (automatic)",
-                ]
-            ),
             "MonthlyCharges": Column(
                 float, Check.in_range(v["monthly_charges_min"], v["monthly_charges_max"])
             ),
             "TotalCharges": Column(float, Check.ge(0), nullable=True),
-            target: cat(YES_NO),
+            target: Column(str, Check.isin(YES_NO)),
         },
         checks=[
             Check(lambda df: len(df) >= v["min_rows"], error="too few rows"),
