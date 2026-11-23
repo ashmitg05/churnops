@@ -34,9 +34,12 @@ jobs:
           REASON: ${{ inputs.reason || 'schedule' }}
         run: echo "Retrain reason: $REASON"
       - name: Pull data + current production model
-        run: dvc pull
+        # First run: remote is empty, so repro rebuilds everything from the public source.
+        run: dvc pull || echo "remote empty or partial; dvc repro will rebuild"
       - name: Run pipeline (only changed stages rebuild)
         run: dvc repro
+      - name: Store data + pipeline outputs on DagsHub
+        run: dvc push
       - name: Promotion gate
         id: promote
         run: python -m src.registry.promote

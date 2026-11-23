@@ -10,3 +10,6 @@ mlartifacts/
 mlflow-data/
 predictions.db
 reports/*.html
+.env
+.env.*
+!.env.example
