@@ -6,16 +6,18 @@ on:
     paths: [src/**, params.yaml, Dockerfile, requirements-serve.txt, models/model.joblib.dvc, reports/*.json]
   workflow_call:  # called by retrain.yml after a promotion
     secrets:
-      HF_TOKEN: {required: true}
       DAGSHUB_TOKEN: {required: true}
-      DATABASE_URL: {required: true}
-      BATCH_API_KEY: {required: true}
+      RENDER_DEPLOY_HOOK: {required: false}
   workflow_dispatch:
 
 permissions:
   contents: read
+  packages: write  # push to GitHub Container Registry
 
-concurrency: deploy  # never two deploys racing on the Space
+concurrency: deploy  # never two deploys racing
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/churnops-api
 
 jobs:
   deploy:
@@ -30,15 +32,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install "dvc==3.58.0" "pathspec==0.12.1" "huggingface_hub==0.27.1"
+      - run: pip install "dvc==3.58.0" "pathspec==0.12.1"
       - uses: ./.github/actions/dagshub
       - name: Pull production model
         run: dvc pull models/model.joblib
-      - name: Push to Hugging Face Space
+      - name: Build and push image to GHCR
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_SPACE: ${{ vars.HF_SPACE }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          BATCH_API_KEY: ${{ secrets.BATCH_API_KEY }}
-          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
-        run: python scripts/deploy_space.py
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker build -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" .
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
+      # Render (free web service) redeploys :latest when its deploy hook is called.
+      - name: Trigger Render deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "RENDER_DEPLOY_HOOK not set; image pushed only"; exit 0; fi
+          curl -fsS -X POST "$HOOK" > /dev/null && echo "Render deploy triggered"

@@ -1,6 +1,6 @@
 # ChurnOps
 
-End-to-end MLOps pipeline for customer churn: versioned data, tracked experiments, a gated model registry, CI/CD to a free Hugging Face Space, drift monitoring that triggers retraining, and SHAP-explained predictions.
+End-to-end MLOps pipeline for customer churn: versioned data, tracked experiments, a gated model registry, CI/CD to a free Render web service, drift monitoring that triggers retraining, and SHAP-explained predictions.
 
 ![CI](https://github.com/ashmitg05/churnops/actions/workflows/ci.yml/badge.svg)
 **Live demo:** _TBD after first deploy_ · **Demo GIF:** _placeholder — `docs/demo.gif`_
@@ -23,7 +23,7 @@ flowchart LR
     F --> G{promotion gate<br/>AUC gain + sanity}
     G -->|promoted| H[models/model.joblib<br/>DVC on DagsHub]
     G -->|rejected| X[keep production]
-    H --> I[Docker -> Hugging Face Space]
+    H --> I[Docker -> GHCR -> Render]
     I --> J[FastAPI /predict] --> K[(Postgres<br/>prediction log)]
     K --> L[Evidently drift job]
     L -->|drift > threshold<br/>workflow_dispatch| M[retrain.yml]
@@ -101,7 +101,7 @@ Next.js 15 + Tailwind v4 + Motion (`dashboard/`). Dark by default, light follows
 cd dashboard && npm install && NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
 ```
 
-Deploy: Vercel, root `dashboard/`, env `NEXT_PUBLIC_API_URL=https://ashmitg05-churnops-api.hf.space`. Set the `ALLOWED_ORIGINS` repo variable to the Vercel URL, then redeploy so CORS allows it.
+Deploy: Vercel, root `dashboard/`, env `NEXT_PUBLIC_API_URL=<Render URL>`. Set `ALLOWED_ORIGINS=<Vercel URL>` on the Render service so CORS allows it.
 
 ---
 
@@ -128,7 +128,7 @@ Deploy: Vercel, root `dashboard/`, env `NEXT_PUBLIC_API_URL=https://ashmitg05-ch
 | Workflow | Trigger | Does |
 |---|---|---|
 | `ci.yml` | every push / PR | ruff, mypy, ingest+validate+split (public data, no creds), pytest |
-| `deploy.yml` | push to `main` (serving paths), called by retrain | `dvc pull` model from DagsHub → `scripts/deploy_space.py` pushes the Docker context + runtime secrets to the HF Space |
+| `deploy.yml` | push to `main` (serving paths), called by retrain | `dvc pull` model from DagsHub → build image → push to GHCR (`:sha` + `:latest`) → Render deploy hook |
 | `retrain.yml` | manual, weekly cron, drift dispatch | `dvc pull` → `dvc repro` (runs logged to DagsHub MLflow) → promote → if promoted: `dvc push`, commit pointer, call deploy |
 | `monitor.yml` | daily | Evidently drift on last 500 logged predictions → dispatch retrain if over threshold |
 
@@ -136,12 +136,13 @@ Deploy: Vercel, root `dashboard/`, env `NEXT_PUBLIC_API_URL=https://ashmitg05-ch
 
 | Piece | Service | Why |
 |---|---|---|
-| API | Hugging Face Spaces (Docker SDK, 2 vCPU / 16 GB) | Free with no billing account; enough RAM for SHAP + 3 ML libs. Sleeps after 48 h idle (cold start ~1 min) |
+| API | Render free web service (Docker image from GHCR, 512 MB) | Free with no card. Sleeps after 15 min idle (cold start ~1 min). Hugging Face Docker Spaces were tried first but now need PRO (HTTP 402) |
+| Image registry | GitHub Container Registry | Free for public images |
 | DVC remote + MLflow server | DagsHub | Free hosted DVC storage and a persistent MLflow tracking server/registry for CI runs |
 | Prediction log | Neon Postgres | Free, serverless |
 | Dashboard | Vercel | Free for hobby projects |
 
-GitHub **secrets**: `HF_TOKEN`, `DAGSHUB_TOKEN`, `DATABASE_URL`, `BATCH_API_KEY`. **Variables**: `HF_SPACE`, `DAGSHUB_USER`, `ALLOWED_ORIGINS`. Credentials live only in GitHub secrets and are copied to the Space's secret store at deploy; DVC credentials go to `.dvc/config.local` (never committed).
+GitHub **secrets**: `DAGSHUB_TOKEN`, `DATABASE_URL` (monitor job), `BATCH_API_KEY`, `RENDER_DEPLOY_HOOK`. **Variables**: `DAGSHUB_USER`. Runtime env (`DATABASE_URL`, `BATCH_API_KEY`, `ALLOWED_ORIGINS`) is set on the Render service. DVC credentials go to `.dvc/config.local` (never committed).
 
 ### Porting to GCP (Cloud Run + Workload Identity Federation)
 
