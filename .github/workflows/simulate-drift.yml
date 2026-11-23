@@ -1,0 +1,53 @@
+name: Simulate drift
+
+# Demo of the monitoring loop against the live API: send a shifted "future" batch, then
+# run the drift monitor (which dispatches retrain.yml if drift crosses the threshold).
+on:
+  workflow_dispatch:
+    inputs:
+      n:
+        description: Customers to send
+        default: "500"
+      control:
+        description: Send an undrifted control batch instead
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: write  # monitor step dispatches retrain.yml
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    env:
+      DAGSHUB_USER: ${{ vars.DAGSHUB_USER }}
+      DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - uses: ./.github/actions/dagshub
+      - run: dvc pull data/processed
+      - name: Wake the API (free tier sleeps when idle)
+        run: curl -fsS --retry 10 --retry-delay 15 --retry-all-errors -m 120 "${{ vars.API_URL }}/health"
+      - name: Send batch through the live API
+        env:
+          BATCH_API_KEY: ${{ secrets.BATCH_API_KEY }}
+          N: ${{ inputs.n }}
+          CONTROL: ${{ inputs.control }}
+        run: |
+          flag=""; [ "$CONTROL" = "true" ] && flag="--no-drift"
+          python -m src.monitoring.simulate_drift --api "${{ vars.API_URL }}" --n "$N" $flag
+      - name: Drift check (dispatches retrain.yml when over threshold)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python -m src.monitoring.drift
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drift-report
+          path: reports/drift.*
