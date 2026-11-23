@@ -173,16 +173,16 @@ stages:
     outs:
     - path: models/candidate.joblib
       hash: md5
-      md5: 4e9f397ca7fdc2a193fc9bbb52dcef6f
+      md5: 60bf0f1c20cb6f34add9986ebb6b84fa
       size: 19602
     - path: reports/optuna_trials.csv
       hash: md5
-      md5: 301926854b9af395222e16fb7e5fa698
-      size: 6504
+      md5: 08ff909f2fef30ad10056cb27c3983e7
+      size: 6452
     - path: reports/train.json
       hash: md5
-      md5: d7dfea7f84cc67aa40ace1f8b11f0bc9
-      size: 4308
+      md5: a2d08c959d3e61cbbb7e6186d0895f8f
+      size: 4198
   evaluate:
     cmd: python -m src.train.evaluate
     deps:
@@ -193,7 +193,7 @@ stages:
       nfiles: 3
     - path: models/candidate.joblib
       hash: md5
-      md5: 4e9f397ca7fdc2a193fc9bbb52dcef6f
+      md5: 60bf0f1c20cb6f34add9986ebb6b84fa
       size: 19602
     - path: src/explain.py
       hash: md5
@@ -216,29 +216,29 @@ stages:
     outs:
     - path: reports/calibration.png
       hash: md5
-      md5: 56960a9d12ea51ebbc822c8f258bbd02
-      size: 31327
+      md5: b400bf1cde1397dab4121e54aade6130
+      size: 35061
     - path: reports/confusion_matrix.png
       hash: md5
-      md5: ff8037355099d30d866663b3297cca3c
-      size: 60944
+      md5: be8df02b1f6ace4891fdfa6b978ef0d1
+      size: 74295
     - path: reports/cost_curve.png
       hash: md5
-      md5: 8ec97e425e9c166e185862533ba23465
-      size: 32104
+      md5: e3e96aa48215e6895e31ba4d94df26b0
+      size: 36069
     - path: reports/curves.json
       hash: md5
-      md5: c2aa2d7d89463ad4969673939194f867
-      size: 8520
+      md5: cf2b6e28e55d3aedb795e123515e6a2c
+      size: 8065
     - path: reports/metrics.json
       hash: md5
-      md5: 7c04579500bef310d510335a04c85f12
-      size: 306
+      md5: 602a8025c43cef60ca2e7c337f2da0e0
+      size: 298
     - path: reports/model_comparison.md
       hash: md5
-      md5: f97e50de5368728f9214d060bbc6f5f0
-      size: 1139
+      md5: 5af2ff13f48a80336ce21bfb221d2da5
+      size: 1123
     - path: reports/shap_summary.png
       hash: md5
-      md5: ff8037355099d30d866663b3297cca3c
-      size: 60944
+      md5: be8df02b1f6ace4891fdfa6b978ef0d1
+      size: 74295

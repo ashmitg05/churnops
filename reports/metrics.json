@@ -4,7 +4,7 @@
   "test_precision": 0.35963777490297544,
   "test_recall": 0.9928571428571429,
   "test_f1": 0.5280151946818613,
-  "test_brier": 0.1626588556818241,
+  "test_brier": 0.16265885568426156,
   "test_threshold": 0.13,
   "test_cost_per_customer": 37.51182592242195
 }
