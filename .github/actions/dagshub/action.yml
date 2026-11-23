@@ -1,0 +1,20 @@
+name: DagsHub auth
+description: Point DVC and MLflow at the DagsHub repo (free hosted DVC storage + MLflow server).
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        DAGSHUB_USER: ${{ env.DAGSHUB_USER }}
+        DAGSHUB_TOKEN: ${{ env.DAGSHUB_TOKEN }}
+      run: |
+        # --local: credentials go to .dvc/config.local (never committed)
+        dvc remote add -f -d --local dagshub "https://dagshub.com/${DAGSHUB_USER}/churnops.dvc"
+        dvc remote modify --local dagshub auth basic
+        dvc remote modify --local dagshub user "$DAGSHUB_USER"
+        dvc remote modify --local dagshub password "$DAGSHUB_TOKEN"
+        {
+          echo "MLFLOW_TRACKING_URI=https://dagshub.com/${DAGSHUB_USER}/churnops.mlflow"
+          echo "MLFLOW_TRACKING_USERNAME=${DAGSHUB_USER}"
+          echo "MLFLOW_TRACKING_PASSWORD=${DAGSHUB_TOKEN}"
+        } >> "$GITHUB_ENV"

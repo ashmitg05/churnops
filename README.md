@@ -1,6 +1,6 @@
 # ChurnOps
 
-End-to-end MLOps pipeline for customer churn: versioned data, tracked experiments, a gated model registry, CI/CD to Cloud Run, drift monitoring that triggers retraining, and SHAP-explained predictions.
+End-to-end MLOps pipeline for customer churn: versioned data, tracked experiments, a gated model registry, CI/CD to a free Hugging Face Space, drift monitoring that triggers retraining, and SHAP-explained predictions.
 
 ![CI](https://github.com/ashmitg05/churnops/actions/workflows/ci.yml/badge.svg)
 **Live demo:** _TBD after first deploy_ · **Demo GIF:** _placeholder — `docs/demo.gif`_
@@ -21,9 +21,9 @@ flowchart LR
         E -->|alias: staging| R[(MLflow<br/>registry)]
     end
     F --> G{promotion gate<br/>AUC gain + sanity}
-    G -->|promoted| H[models/model.joblib<br/>DVC on GCS]
+    G -->|promoted| H[models/model.joblib<br/>DVC on DagsHub]
     G -->|rejected| X[keep production]
-    H --> I[Docker -> Artifact Registry -> Cloud Run]
+    H --> I[Docker -> Hugging Face Space]
     I --> J[FastAPI /predict] --> K[(Postgres<br/>prediction log)]
     K --> L[Evidently drift job]
     L -->|drift > threshold<br/>workflow_dispatch| M[retrain.yml]
@@ -101,7 +101,7 @@ Next.js 15 + Tailwind v4 + Motion (`dashboard/`). Dark by default, light follows
 cd dashboard && npm install && NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
 ```
 
-Deploy: Vercel, root `dashboard/`, env `NEXT_PUBLIC_API_URL=<Cloud Run URL>`. Set `ALLOWED_ORIGINS=<Vercel URL>` on the Cloud Run service for CORS.
+Deploy: Vercel, root `dashboard/`, env `NEXT_PUBLIC_API_URL=https://ashmitg05-churnops-api.hf.space`. Set the `ALLOWED_ORIGINS` repo variable to the Vercel URL, then redeploy so CORS allows it.
 
 ---
 
@@ -114,9 +114,9 @@ Deploy: Vercel, root `dashboard/`, env `NEXT_PUBLIC_API_URL=<Cloud Run URL>`. Se
 | **One schema module** (`src/data/schema.py`) feeds Pandera *and* Pydantic | Training and API agree on what valid input is | API accepting values the model never saw |
 | **Features inside the sklearn Pipeline** | Serving calls the same `FeatureEngineer` code; one artifact | Training/serving skew (tested: `tests/test_features.py`, `test_served_equals_offline`) |
 | **MLflow** tracking + registry aliases | Every metric traceable to a run; `staging`/`production` aliases (stages are deprecated in MLflow ≥2.9) | Unreproducible "best model" claims |
-| **Promotion = deployed artifact is source of truth** | `models/model.joblib` (DVC/GCS) is production; MLflow alias mirrors it | CI needing a paid, always-on MLflow server; registry and deploy disagreeing |
+| **Promotion = deployed artifact is source of truth** | `models/model.joblib` (DVC on DagsHub) is production; MLflow alias mirrors it | CI needing a paid, always-on MLflow server; registry and deploy disagreeing |
 | **Gate: AUC gain ≥ 0.005 AND sanity** (positive-rate band, non-constant scores, p95 latency ≤ 100 ms, gender AUC gap ≤ 0.05) | Small noisy gains don't trigger deploys; broken models never ship | Degenerate or slower models reaching prod |
-| **Baked model in the image** (vs loading from MLflow at startup) | Image tag = model version, no runtime dependency, fast cold start on Cloud Run | Outage when the tracking server is down. Cost: a new model needs a new image (automated by `retrain.yml`) |
+| **Baked model in the image** (vs loading from MLflow at startup) | Image tag = model version, no runtime dependency, fast cold start | Outage when the tracking server is down. Cost: a new model needs a new image (automated by `retrain.yml`) |
 | **Threshold by business cost on val** | Decision matches money, not F1 | Optimising a metric nobody pays for |
 | **Optuna objective = CV on train** | 50 trials can't overfit the val set used for threshold/selection | Optimistic val metrics |
 | **Workload Identity Federation** | GitHub OIDC token → short-lived GCP creds | Leaked long-lived JSON keys |
@@ -128,36 +128,40 @@ Deploy: Vercel, root `dashboard/`, env `NEXT_PUBLIC_API_URL=<Cloud Run URL>`. Se
 | Workflow | Trigger | Does |
 |---|---|---|
 | `ci.yml` | every push / PR | ruff, mypy, ingest+validate+split (public data, no creds), pytest |
-| `deploy.yml` | push to `main`, called by retrain | `dvc pull` model → build → push to Artifact Registry → `gcloud run deploy` |
-| `retrain.yml` | manual, weekly cron, drift dispatch | `dvc pull` → `dvc repro` → promote → if promoted: `dvc push`, commit pointer, call deploy |
+| `deploy.yml` | push to `main` (serving paths), called by retrain | `dvc pull` model from DagsHub → `scripts/deploy_space.py` pushes the Docker context + runtime secrets to the HF Space |
+| `retrain.yml` | manual, weekly cron, drift dispatch | `dvc pull` → `dvc repro` (runs logged to DagsHub MLflow) → promote → if promoted: `dvc push`, commit pointer, call deploy |
 | `monitor.yml` | daily | Evidently drift on last 500 logged predictions → dispatch retrain if over threshold |
 
-### GCP setup (one-time, Workload Identity Federation)
+### Hosting: free tier, no card
+
+| Piece | Service | Why |
+|---|---|---|
+| API | Hugging Face Spaces (Docker SDK, 2 vCPU / 16 GB) | Free with no billing account; enough RAM for SHAP + 3 ML libs. Sleeps after 48 h idle (cold start ~1 min) |
+| DVC remote + MLflow server | DagsHub | Free hosted DVC storage and a persistent MLflow tracking server/registry for CI runs |
+| Prediction log | Neon Postgres | Free, serverless |
+| Dashboard | Vercel | Free for hobby projects |
+
+GitHub **secrets**: `HF_TOKEN`, `DAGSHUB_TOKEN`, `DATABASE_URL`, `BATCH_API_KEY`. **Variables**: `HF_SPACE`, `DAGSHUB_USER`, `ALLOWED_ORIGINS`. Credentials live only in GitHub secrets and are copied to the Space's secret store at deploy; DVC credentials go to `.dvc/config.local` (never committed).
+
+### Porting to GCP (Cloud Run + Workload Identity Federation)
+
+The first target was Cloud Run. It was dropped only because GCP needs a billing account with a card even on the free tier. The image is unchanged; swap `deploy.yml` for `gcloud run deploy` and authenticate with WIF instead of long-lived keys:
 
 ```bash
-PROJECT=your-project-id; REGION=asia-south1; REPO=ashmitg05/churnops
+PROJECT=your-project-id; REGION=us-central1; REPO=ashmitg05/churnops
 gcloud services enable run.googleapis.com artifactregistry.googleapis.com iamcredentials.googleapis.com secretmanager.googleapis.com
 gcloud artifacts repositories create churnops --repository-format=docker --location=$REGION
-gsutil mb -l $REGION gs://$PROJECT-churnops-dvc
 gcloud iam service-accounts create churnops-ci
 SA=churnops-ci@$PROJECT.iam.gserviceaccount.com
-for r in run.admin artifactregistry.writer storage.objectAdmin iam.serviceAccountUser secretmanager.secretAccessor; do
+for r in run.admin artifactregistry.writer iam.serviceAccountUser secretmanager.secretAccessor; do
   gcloud projects add-iam-policy-binding $PROJECT --member=serviceAccount:$SA --role=roles/$r; done
 gcloud iam workload-identity-pools create github --location=global
-gcloud iam workload-identity-pools providers create-oidc github --location=global --workload-identity-pool=github \
-  --issuer-uri=https://token.actions.githubusercontent.com \
-  --attribute-mapping=google.subject=assertion.sub,attribute.repository=assertion.repository \
-  --attribute-condition="assertion.repository=='$REPO' && assertion.ref=='refs/heads/main'"
+gcloud iam workload-identity-pools providers create-oidc github --location=global --workload-identity-pool=github   --issuer-uri=https://token.actions.githubusercontent.com   --attribute-mapping=google.subject=assertion.sub,attribute.repository=assertion.repository   --attribute-condition="assertion.repository=='$REPO' && assertion.ref=='refs/heads/main'"
 POOL=$(gcloud iam workload-identity-pools describe github --location=global --format='value(name)')
-gcloud iam service-accounts add-iam-policy-binding $SA --role=roles/iam.workloadIdentityUser \
-  --member="principalSet://iam.googleapis.com/$POOL/attribute.repository/$REPO"
-printf '%s' "$NEON_URL" | gcloud secrets create churnops-database-url --data-file=-
-dvc remote modify gcs url gs://$PROJECT-churnops-dvc && dvc remote default gcs && dvc push
+gcloud iam service-accounts add-iam-policy-binding $SA --role=roles/iam.workloadIdentityUser   --member="principalSet://iam.googleapis.com/$POOL/attribute.repository/$REPO"
 ```
 
-GitHub repo **variables**: `GCP_PROJECT_ID`, `GCP_REGION`, `WIF_PROVIDER` (`$POOL/providers/github`), `WIF_SERVICE_ACCOUNT`. **Secret**: `DATABASE_URL` (for `monitor.yml`). The `attribute-condition` means only workflows running on this repo's `main` branch can impersonate the service account (feature branches and forks cannot). No JSON key exists anywhere.
-
-⚠️ **Set a GCP budget alert before the first deploy** (Billing → Budgets & alerts). Cloud Run is capped at `--max-instances 2`.
+The `attribute-condition` means only workflows on this repo's `main` branch can impersonate the service account. No JSON key exists. Set a budget alert before deploying.
 
 ---
 

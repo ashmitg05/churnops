@@ -11,31 +11,30 @@ on:
 
 permissions:
   contents: write  # commit the new model pointer
-  id-token: write
 
 jobs:
   retrain:
     runs-on: ubuntu-latest
+    env:
+      DAGSHUB_USER: ${{ vars.DAGSHUB_USER }}
+      DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
     outputs:
       promoted: ${{ steps.promote.outputs.promoted }}
     steps:
       - uses: actions/checkout@v4
-      - uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
-          service_account: ${{ vars.WIF_SERVICE_ACCOUNT }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt
+      - uses: ./.github/actions/dagshub
       # Untrusted text goes through env, never interpolated into the script (injection-safe).
       - name: Reason
         env:
           REASON: ${{ inputs.reason || 'schedule' }}
         run: echo "Retrain reason: $REASON"
       - name: Pull data + current production model
-        run: dvc remote default gcs && dvc pull
+        run: dvc pull
       - name: Run pipeline (only changed stages rebuild)
         run: dvc repro
       - name: Promotion gate
@@ -62,3 +61,4 @@ jobs:
     needs: retrain
     if: needs.retrain.outputs.promoted == 'true'
     uses: ./.github/workflows/deploy.yml
+    secrets: inherit

@@ -26,3 +26,4 @@ httpx==0.28.1
 sqlalchemy==2.0.36
 psycopg[binary]==3.2.3
 evidently==0.4.40
+huggingface_hub==0.27.1
