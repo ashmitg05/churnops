@@ -1,0 +1,6 @@
+[core]
+    remote = local
+['remote "local"']
+    url = ../../churnops-dvc-store
+['remote "gcs"']
+    url = gs://CHANGE-ME-churnops-dvc

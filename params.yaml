@@ -1,0 +1,21 @@
+seed: 42
+
+data:
+  # IBM's public copy of the Kaggle "blastchar/telco-customer-churn" CSV (same file, no API key).
+  url: https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv
+  raw_path: data/raw/telco.csv
+  processed_dir: data/processed
+  target: Churn
+
+validation:
+  min_rows: 5000
+  tenure_max: 72
+  monthly_charges_min: 0.0
+  monthly_charges_max: 200.0
+  # Expected share of churners; outside this band = upstream data changed, fail.
+  churn_rate_min: 0.20
+  churn_rate_max: 0.32
+
+split:
+  val_size: 0.15
+  test_size: 0.15

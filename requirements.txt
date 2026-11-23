@@ -1,0 +1,16 @@
+pandas==2.2.3
+pyarrow==18.1.0
+pandera==0.21.1
+scikit-learn==1.5.2
+pyyaml==6.0.2
+requests==2.32.3
+dvc[gs]==3.58.0
+matplotlib==3.9.3
+jupyter==1.1.1
+pytest==8.3.4
+ruff==0.8.4
+mypy==1.13.0
+types-PyYAML==6.0.12.20241221
+types-requests==2.32.0.20241016
+pathspec==0.12.1  # dvc 3.58 breaks on newer
+multimethod==1.12  # pandera 0.21 breaks on 2.x

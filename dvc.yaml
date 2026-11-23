@@ -1,0 +1,15 @@
+stages:
+  ingest:
+    cmd: python -m src.data.ingest
+    deps: [src/data/ingest.py]
+    params: [data.url]
+    outs: [data/raw/telco.csv]
+  validate:
+    cmd: python -m src.data.validate
+    deps: [src/data/validate.py, data/raw/telco.csv]
+    params: [validation]
+  split:
+    cmd: python -m src.data.split
+    deps: [src/data/split.py, src/data/validate.py, data/raw/telco.csv]
+    params: [seed, split]
+    outs: [data/processed]
