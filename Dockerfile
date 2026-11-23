@@ -8,6 +8,8 @@ COPY params.yaml .
 COPY src/ src/
 # Baked artifact: image tag == model version, no runtime dependency on MLflow.
 COPY models/model.joblib models/model.joblib
+# Latest pipeline reports for /reports (small JSON only)
+COPY reports/ reports/
 RUN useradd -m app && chown -R app /app
 USER app
 ENV PORT=8080

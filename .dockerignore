@@ -4,7 +4,10 @@ data
 mlruns
 mlflow.db
 *.db
-reports
+reports/*.png
+reports/*.html
+reports/*.csv
+reports/*.log
 notebooks
 dashboard
 tests

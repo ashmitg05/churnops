@@ -105,3 +105,18 @@ def test_model_info_and_logging(client: TestClient) -> None:
 
     logged = recent_predictions(state["engine"], 1000)
     assert len(logged) >= 51 and set(logged["model_version"]) == {"test"}
+
+
+def test_reports_and_stats(client: TestClient) -> None:
+    rep = client.get("/reports").json()
+    assert set(rep) == {"metrics", "train", "promotion", "drift", "curves"}
+    stats = client.get("/monitoring/stats").json()
+    assert stats["total"] >= 51 and sum(s["volume"] for s in stats["series"]) == stats["total"]
+
+
+def test_cors_allows_dashboard(client: TestClient) -> None:
+    r = client.options(
+        "/predict",
+        headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "POST"},
+    )
+    assert r.headers["access-control-allow-origin"] == "http://localhost:3000"

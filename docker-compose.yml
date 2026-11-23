@@ -25,12 +25,11 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
   dashboard:
-    image: python:3.11-slim
+    image: node:22-alpine
     working_dir: /app
-    command: sh -c "pip install -q streamlit==1.41.1 requests pandas sqlalchemy psycopg[binary] pyyaml && streamlit run dashboard/app.py --server.address 0.0.0.0"
+    command: sh -c "npm ci && npm run build && npm start"
     environment:
-      API_URL: http://api:8000
-      DATABASE_URL: postgresql://churnops:churnops@postgres:5432/churnops
-    volumes: [".:/app"]
-    ports: ["8501:8501"]
+      NEXT_PUBLIC_API_URL: http://localhost:8000  # browser-side calls, so host port
+    volumes: ["./dashboard:/app"]
+    ports: ["3000:3000"]
     depends_on: [api]

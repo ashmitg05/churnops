@@ -73,6 +73,8 @@ monitoring:
   drift_share_threshold: 0.2
   stattest_threshold: 0.05
   retrain_workflow: retrain.yml
+  stats_limit: 50000
+  stats_bucket: h
 
 simulate:
   month_to_month_share: 0.8

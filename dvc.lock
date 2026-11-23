@@ -81,9 +81,9 @@ stages:
       nfiles: 3
     - path: src/features
       hash: md5
-      md5: 6ca260148b7a69b0bb8c022567496121.dir
-      size: 11529
-      nfiles: 5
+      md5: 6830f75a7ab2f77d5c29225c54b69f60.dir
+      size: 5060
+      nfiles: 3
     params:
       params.yaml:
         features:
@@ -123,8 +123,8 @@ stages:
       size: 3153
     - path: src/train/train.py
       hash: md5
-      md5: d4b86b89b078590f4284c1bc7f21fc45
-      size: 6157
+      md5: 6a2929c172180d23c431dc7e72a283bc
+      size: 6167
     params:
       params.yaml:
         cost:
@@ -197,12 +197,12 @@ stages:
       size: 19602
     - path: src/explain.py
       hash: md5
-      md5: c6d14c73558af9d8aae0e9a22b4824df
-      size: 3983
+      md5: e144f263ec3ca3d58b1ff78a06cd7403
+      size: 4005
     - path: src/train/evaluate.py
       hash: md5
-      md5: 7330537f50443cff2f937dee67235009
-      size: 3400
+      md5: 130aadf1c8c1d0770049fbc0bfd40129
+      size: 4361
     params:
       params.yaml:
         cost:
@@ -226,6 +226,10 @@ stages:
       hash: md5
       md5: 8ec97e425e9c166e185862533ba23465
       size: 32104
+    - path: reports/curves.json
+      hash: md5
+      md5: c2aa2d7d89463ad4969673939194f867
+      size: 8520
     - path: reports/metrics.json
       hash: md5
       md5: 7c04579500bef310d510335a04c85f12

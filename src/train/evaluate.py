@@ -1,15 +1,24 @@
 """Evaluate the candidate on the held-out test set; write report + log to its MLflow run."""
 
 import json
+from typing import Any
 
 import joblib
 import matplotlib.pyplot as plt
 import mlflow
+import numpy as np
 import shap
+from sklearn.calibration import calibration_curve
 
 from src.config import ROOT, load_params, setup_mlflow
 from src.explain import Explainer
-from src.train.metrics import compute_metrics, plot_calibration, plot_confusion, plot_cost_curve
+from src.train.metrics import (
+    compute_metrics,
+    cost_curve,
+    plot_calibration,
+    plot_confusion,
+    plot_cost_curve,
+)
 from src.train.train import load_split
 
 
@@ -44,8 +53,29 @@ def main() -> None:
         mlflow.log_dict(report, "evaluation/report.json")
 
     (rep / "metrics.json").write_text(json.dumps(metrics, indent=2))
+    write_curves(y, proba, t, p)
     write_comparison_table(rep / "train.json", metrics)
     print(json.dumps(metrics, indent=2))
+
+
+def write_curves(y: np.ndarray, proba: np.ndarray, t: float, p: dict[str, Any]) -> None:
+    """Chart data (not images) so the dashboard draws interactive curves from the same run."""
+    frac, mean = calibration_curve(
+        y, proba, n_bins=p["evaluate"]["calibration_bins"], strategy="quantile"
+    )
+    grid, costs = cost_curve(y, proba, p["cost"])
+    curves = {
+        "calibration": [
+            {"predicted": float(m), "observed": float(f)} for m, f in zip(mean, frac, strict=True)
+        ],
+        "cost": [
+            {"threshold": round(float(g), 4), "cost": float(c)}
+            for g, c in zip(grid, costs, strict=True)
+        ],
+        "threshold": t,
+        "cost_params": p["cost"],
+    }
+    (ROOT / "reports" / "curves.json").write_text(json.dumps(curves, indent=2))
 
 
 def write_comparison_table(train_json: object, test: dict[str, float]) -> None:

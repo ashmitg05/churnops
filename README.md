@@ -28,7 +28,7 @@ flowchart LR
     K --> L[Evidently drift job]
     L -->|drift > threshold<br/>workflow_dispatch| M[retrain.yml]
     M --> E
-    J --> N[Streamlit dashboard]
+    J --> N[Next.js dashboard]
 ```
 
 All DVC stages: `ingest → validate → split → featurize → train → evaluate`. `dvc repro` reruns only stages whose code, data or params changed.
@@ -87,7 +87,21 @@ Step 5 is the honest outcome. Drift in *inputs* without new *labels* cannot prod
 
 Note on threshold: the first run used 0.3 and did not fire (0.26). Four shifted inputs out of 19 columns can never reach 30%, so the threshold was lowered to 0.2. The control batch still stays well below it (0.05).
 
-Screenshots: `docs/screenshots/dashboard_predict.jpg`, Evidently report `docs/screenshots/drift_report.html`.
+Evidently report: `docs/screenshots/drift_report.html`.
+
+## Dashboard
+
+Next.js 15 + Tailwind v4 + Motion (`dashboard/`). Dark by default, light follows the OS. The Predict form is built from the API's OpenAPI schema, so its options come from the same constants as Pandera and Pydantic. Charts use JSON from `/reports` and `/monitoring/stats` (same MLflow run), not static images.
+
+| Predict | Model | Monitoring |
+|---|---|---|
+| ![](docs/screenshots/predict.jpg) | ![](docs/screenshots/model.jpg) | ![](docs/screenshots/monitoring.jpg) |
+
+```bash
+cd dashboard && npm install && NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
+```
+
+Deploy: Vercel, root `dashboard/`, env `NEXT_PUBLIC_API_URL=<Cloud Run URL>`. Set `ALLOWED_ORIGINS=<Vercel URL>` on the Cloud Run service for CORS.
 
 ---
 
@@ -153,7 +167,7 @@ GitHub repo **variables**: `GCP_PROJECT_ID`, `GCP_REGION`, `WIF_PROVIDER` (`$POO
 python -m venv .venv && .venv/Scripts/pip install -r requirements.txt   # or uv
 dvc repro                                  # data -> validate -> train -> evaluate
 python -m src.registry.promote             # gate -> models/model.joblib
-docker compose up --build                  # Postgres + MLflow + API :8000 + dashboard :8501
+docker compose up --build                  # Postgres + MLflow + API :8000 + dashboard :3000
 python -m src.monitoring.simulate_drift && python -m src.monitoring.drift
 ```
 
@@ -167,4 +181,3 @@ MLflow UI for local runs: `mlflow ui --backend-store-uri sqlite:///mlflow.db`.
 - **Retrain on drift can't improve without new labels**: the loop correctly rejects. A real system needs a label-feedback job: join actual churn outcomes back to logged predictions, then monitor real ROC-AUC, not just input drift.
 - **Drift threshold is share-of-columns**, which dilutes targeted shifts. Next: per-feature weights, or prediction drift as a primary signal.
 - **Next:** feature store (Feast) once >1 model shares features, shadow deployment (log candidate predictions next to production before promoting), A/B test of the retention offer to measure the real `churn_loss`/`offer_cost`, calibration (isotonic) so probabilities are readable.
-- Dashboard is Streamlit (v1), so it deploys on Streamlit Community Cloud, not Vercel. A Next.js rewrite is the upgrade path.

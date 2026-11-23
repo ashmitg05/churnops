@@ -46,5 +46,7 @@ stages:
       - reports/shap_summary.png:
           cache: false
     outs:
+      - reports/curves.json:
+          cache: false
       - reports/model_comparison.md:
           cache: false

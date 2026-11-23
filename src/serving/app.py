@@ -1,17 +1,20 @@
 """FastAPI serving the baked production artifact (models/model.joblib)."""
 
+import json
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
 import joblib
+import pandas as pd
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import ROOT, load_params
 from src.explain import Explainer
 from src.features.build import to_frame
-from src.serving.db import get_engine, log_predictions
+from src.serving.db import get_engine, log_predictions, recent_predictions
 from src.serving.schemas import Customer, Prediction
 
 P = load_params()
@@ -30,6 +33,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="ChurnOps", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000").split(","),
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
+REPORT_FILES = ["metrics", "train", "promotion", "drift", "curves"]
 
 
 def risk_level(prob: float, threshold: float) -> str:
@@ -80,6 +90,30 @@ def predict_batch(customers: list[Customer]) -> list[Prediction]:  # type: ignor
 def model_info() -> dict[str, Any]:
     meta = state["art"]["meta"]
     return {**meta, "threshold": state["art"]["threshold"]}
+
+
+@app.get("/reports")
+def reports() -> dict[str, Any]:
+    """Latest pipeline reports baked into the image (null when a report was not produced)."""
+    out: dict[str, Any] = {}
+    for name in REPORT_FILES:
+        f = ROOT / "reports" / f"{name}.json"
+        out[name] = json.loads(f.read_text()) if f.exists() else None
+    return out
+
+
+@app.get("/monitoring/stats")
+def monitoring_stats() -> dict[str, Any]:
+    df = recent_predictions(state["engine"], P["monitoring"]["stats_limit"])
+    if df.empty:
+        return {"total": 0, "series": []}
+    df["bucket"] = pd.to_datetime(df["ts"], utc=True).dt.floor(P["monitoring"]["stats_bucket"])
+    g = df.groupby("bucket").agg(volume=("id", "size"), churn_rate=("label", "mean"))
+    series = [
+        {"ts": ts.isoformat(), "volume": int(r.volume), "churn_rate": float(r.churn_rate)}
+        for ts, r in g.iterrows()
+    ]
+    return {"total": len(df), "mean_probability": float(df["probability"].mean()), "series": series}
 
 
 @app.get("/health")
