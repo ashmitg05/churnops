@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write  # commit the new model pointer
+  packages: write  # called deploy.yml pushes the image to GHCR
 
 jobs:
   retrain:
