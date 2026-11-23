@@ -3,7 +3,7 @@
 End-to-end MLOps pipeline for customer churn: versioned data, tracked experiments, a gated model registry, CI/CD to a free Render web service, drift monitoring that triggers retraining, and SHAP-explained predictions.
 
 ![CI](https://github.com/ashmitg05/churnops/actions/workflows/ci.yml/badge.svg)
-**Live demo:** _TBD after first deploy_ · **Demo GIF:** _placeholder — `docs/demo.gif`_
+**Live demo:** [dashboard](https://churnops-two.vercel.app) · [API docs](https://churnops-api-b9vs.onrender.com/docs) (free tier: first request after idle takes ~1 min) · **Demo GIF:** _placeholder — `docs/demo.gif`_
 
 Dataset: [IBM Telco Customer Churn](https://www.kaggle.com/datasets/blastchar/telco-customer-churn) (7,043 customers, 26.5% churn).
 
