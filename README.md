@@ -75,15 +75,21 @@ The threshold minimising this on the **validation** set is **0.13**, not 0.5. Be
 
 ## Drift → retrain story
 
-Real log: [`reports/drift_loop.log`](reports/drift_loop.log). Local run, API on port 8001, SQLite prediction log.
+Run in the cloud against the live API (Render + Neon), every step a real GitHub Actions run:
 
-1. **Control batch** (500 customers resampled from test, no shift) → `drift_share = 0.05` (1/19 columns: `tenure`) → **no drift**.
-2. **Drifted batch** (`simulate_drift.py`: 80% month-to-month, charges ×1.25, 60% electronic check, tenure ×0.5) → mean predicted churn rose from 0.404 to 0.582.
-3. **Drift check** → `drift_share = 0.26` (5/19: Contract, MonthlyCharges, PaymentMethod, TotalCharges, tenure) > threshold 0.2 → **drift detected** → `workflow_dispatch` to `retrain.yml` (locally skipped: no `GITHUB_TOKEN`).
-4. **Retrain** → `dvc repro`: data unchanged, so train/evaluate were skipped (cached).
-5. **Promotion gate** → `promoted=False: ROC-AUC gain +0.0000 < required +0.0050` → production kept, no redeploy.
+| # | Step | Run | Result |
+|---|---|---|---|
+| 1 | **Control batch**: 500 customers resampled from test, no shift | [simulate-drift #45254710258](https://github.com/ashmitg05/churnops/actions/runs/45254710258) | mean predicted churn 0.404, `share_drifted = 0.05` (1/19: `tenure`), **no drift** |
+| 2 | **Drifted batch**: 80% month-to-month, charges x1.25, 60% electronic check, tenure x0.5 | [simulate-drift #45255186738](https://github.com/ashmitg05/churnops/actions/runs/45255186738) | mean predicted churn 0.582, `share_drifted = 0.26` (5/19: Contract, MonthlyCharges, PaymentMethod, TotalCharges, tenure) > 0.2, **drift detected**, `retrain_triggered: true` |
+| 3 | **Retrain** dispatched by the monitor via `workflow_dispatch` | [retrain #45255795226](https://github.com/ashmitg05/churnops/actions/runs/45255795226) | data stages cached; candidate `logreg/class_weight v2`, val ROC-AUC 0.8346, logged to DagsHub MLflow |
+| 4 | **Promotion gate** on the same held-out test set | same run | `promoted=False: ROC-AUC gain +0.0000 < required +0.0050` |
+| 5 | **Redeploy** | same run | **skipped**, production stays on v1 |
 
-Step 5 is the honest outcome. Drift in *inputs* without new *labels* cannot produce a better model. Retraining only helps once labelled outcomes for the drifted period come in. The gate stops a pointless redeploy.
+The first dispatched retrain ([#45255645344](https://github.com/ashmitg05/churnops/actions/runs/45255645344)) failed at startup: the called deploy workflow needed `packages: write`, which the caller did not grant. Fixed, then re-dispatched with the same drift reason (run 3).
+
+Local rehearsal of the same loop: [`reports/drift_loop.log`](reports/drift_loop.log).
+
+Steps 4 and 5 are the honest outcome. Drift in *inputs* without new *labels* cannot produce a better model. Retraining only helps once labelled outcomes for the drifted period come in. The gate stops a pointless redeploy.
 
 Note on threshold: the first run used 0.3 and did not fire (0.26). Four shifted inputs out of 19 columns can never reach 30%, so the threshold was lowered to 0.2. The control batch still stays well below it (0.05).
 
