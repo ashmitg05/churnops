@@ -31,7 +31,7 @@ class _Base(BaseModel):
     def total_charges_rule(self) -> "_Base":
         # Same rule as Pandera: null TotalCharges only for brand-new customers.
         if self.__dict__["TotalCharges"] is None and self.__dict__["tenure"] != 0:
-            raise ValueError("TotalCharges required when tenure > 0")
+            raise ValueError("Total charges is required when tenure is above 0")
         return self
 
 

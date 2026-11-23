@@ -1,7 +1,6 @@
 "use client";
 
 import { Warning } from "@phosphor-icons/react";
-import { motion, useReducedMotion } from "motion/react";
 import type { ButtonHTMLAttributes, PointerEvent, ReactNode } from "react";
 
 /* Radius system: controls/buttons = full pill, panels = 16px (rounded-2xl), chips = 8px. */
@@ -39,18 +38,12 @@ export function Button({
   );
 }
 
-export function Reveal({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
-  const reduce = useReducedMotion();
-  return (
-    <motion.div
-      className={className}
-      initial={reduce ? false : { opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.55, delay, ease: [0.16, 1, 0.3, 1] }}
-    >
-      {children}
-    </motion.div>
-  );
+/**
+ * Layout wrapper. Panels paint immediately (no opacity-0 entrance before hydration);
+ * the page's one authored motion moment is the prediction result.
+ */
+export function Reveal({ children, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
+  return <div className={className}>{children}</div>;
 }
 
 export function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {

@@ -62,7 +62,7 @@ export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`${API}${path}`, { ...init, headers: { "Content-Type": "application/json" } });
   if (!r.ok) {
     const body = await r.text();
-    throw new Error(`${r.status}: ${body.slice(0, 300)}`);
+    throw new Error(`${r.status}: ${body}`);
   }
   return (await r.json()) as T;
 }

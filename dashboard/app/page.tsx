@@ -130,7 +130,7 @@ export default function PredictPage() {
                             options={spec[f].options!}
                             value={row[f]}
                             onChange={(v) => set(f, v)}
-                            wide={spec[f].options!.join("").length > 24}
+                            wide={spec[f].options!.join("").length > 18}
                           />
                         ) : (
                           <NumberField
@@ -159,8 +159,10 @@ export default function PredictPage() {
           </Panel>
         </Reveal>
 
-        <Reveal delay={0.12} className="lg:sticky lg:top-24 lg:self-start">
-          <ResultPanel result={result} error={schema ? error : null} />
+        <Reveal className="lg:sticky lg:top-24 lg:self-start">
+          <div aria-live="polite">
+            <ResultPanel result={result} error={schema ? error : null} />
+          </div>
         </Reveal>
       </div>
     </>
@@ -181,28 +183,28 @@ function Segmented({
   wide: boolean;
 }) {
   const display = (o: string | number) => (typeof o === "number" ? (o ? "Yes" : "No") : o.replace(" (automatic)", " (auto)"));
+  // Native radios (visually hidden) give arrow-key navigation and form semantics for free.
   return (
-    <div className={`flex flex-col gap-2 ${wide ? "sm:col-span-2" : ""}`}>
-      <span className="text-[13px] text-muted">{label}</span>
-      <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-1 rounded-2xl border border-line bg-bg/40 p-1">
-        {options.map((o) => {
-          const on = o === value;
-          return (
-            <button
-              key={String(o)}
-              role="radio"
-              aria-checked={on}
-              onClick={() => onChange(o)}
-              className={`flex-1 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] transition-colors ${
-                on ? "bg-surface-2 text-fg shadow-[inset_0_0_0_1px_var(--line-strong)]" : "text-muted hover:text-fg"
-              }`}
-            >
-              {display(o)}
-            </button>
-          );
-        })}
+    <fieldset className={`flex flex-col gap-2 ${wide ? "sm:col-span-2" : ""}`}>
+      <legend className="mb-2 text-[13px] text-muted">{label}</legend>
+      <div className="flex flex-wrap gap-1 rounded-2xl border border-line bg-bg/40 p-1">
+        {options.map((o) => (
+          <label
+            key={String(o)}
+            className="flex-1 cursor-pointer whitespace-nowrap rounded-full px-3 py-1.5 text-center text-[13px] text-muted transition-colors hover:text-fg has-[:checked]:bg-surface-2 has-[:checked]:text-fg has-[:checked]:shadow-[inset_0_0_0_1px_var(--line-strong)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent"
+          >
+            <input
+              type="radio"
+              name={label}
+              className="sr-only"
+              checked={o === value}
+              onChange={() => onChange(o)}
+            />
+            {display(o)}
+          </label>
+        ))}
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -244,6 +246,7 @@ function NumberField({
 }
 
 function ResultPanel({ result, error }: { result: Prediction | null; error: string | null }) {
+  if (error?.startsWith("422")) return <ValidationNote raw={error} />;
   if (error) return <ErrorNote message={error} />;
   if (!result)
     return (
@@ -357,6 +360,27 @@ function Gauge({ value, threshold, idle = false }: { value: number; threshold: n
         churn probability
       </text>
     </svg>
+  );
+}
+
+/** FastAPI 422 -> one line per field, named the way the form names it. */
+function ValidationNote({ raw }: { raw: string }) {
+  let items: string[] = [];
+  try {
+    const detail = JSON.parse(raw.slice(raw.indexOf("{"))).detail as { loc: string[]; msg: string }[];
+    items = detail.map((d) => `${LABELS[d.loc.at(-1) ?? ""] ?? "Customer"}: ${d.msg.replace(/^Value error, /, "")}`);
+  } catch {
+    items = ["The API rejected this customer. Check the values and try again."];
+  }
+  return (
+    <Panel className="flex flex-col gap-3">
+      <h2 className="font-medium">Fix these values and predict again</h2>
+      <ul className="flex flex-col gap-1.5 text-sm text-muted">
+        {items.map((i) => (
+          <li key={i}>{i}</li>
+        ))}
+      </ul>
+    </Panel>
   );
 }
 
