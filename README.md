@@ -2,7 +2,7 @@
 
 End-to-end MLOps pipeline for customer churn: versioned data, tracked experiments, a gated model registry, CI/CD to Cloud Run, drift monitoring that triggers retraining, and SHAP-explained predictions.
 
-![CI](https://github.com/OWNER/churnops/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/ashmitg05/churnops/actions/workflows/ci.yml/badge.svg)
 **Live demo:** _TBD after first deploy_ · **Demo GIF:** _placeholder — `docs/demo.gif`_
 
 Dataset: [IBM Telco Customer Churn](https://www.kaggle.com/datasets/blastchar/telco-customer-churn) (7,043 customers, 26.5% churn).
@@ -135,7 +135,7 @@ Deploy: Vercel, root `dashboard/`, env `NEXT_PUBLIC_API_URL=<Cloud Run URL>`. Se
 ### GCP setup (one-time, Workload Identity Federation)
 
 ```bash
-PROJECT=your-project-id; REGION=asia-south1; REPO=OWNER/churnops
+PROJECT=your-project-id; REGION=asia-south1; REPO=ashmitg05/churnops
 gcloud services enable run.googleapis.com artifactregistry.googleapis.com iamcredentials.googleapis.com secretmanager.googleapis.com
 gcloud artifacts repositories create churnops --repository-format=docker --location=$REGION
 gsutil mb -l $REGION gs://$PROJECT-churnops-dvc
