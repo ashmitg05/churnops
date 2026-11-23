@@ -120,3 +120,16 @@ def test_cors_allows_dashboard(client: TestClient) -> None:
         headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "POST"},
     )
     assert r.headers["access-control-allow-origin"] == "http://localhost:3000"
+
+
+def test_batch_requires_key_when_configured(
+    client: TestClient, data: tuple[pd.DataFrame, pd.Series], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("BATCH_API_KEY", "test-key")
+    body = payloads(data[0].head(2))
+    assert client.post("/predict/batch", json=body).status_code == 401
+    assert (
+        client.post("/predict/batch", json=body, headers={"X-API-Key": "wrong"}).status_code == 401
+    )
+    ok = client.post("/predict/batch", json=body, headers={"X-API-Key": "test-key"})
+    assert ok.status_code == 200

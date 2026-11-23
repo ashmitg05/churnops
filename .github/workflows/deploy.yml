@@ -45,4 +45,4 @@ jobs:
             --region ${{ vars.GCP_REGION }} \
             --allow-unauthenticated \
             --memory 1Gi --max-instances 2 \
-            --set-secrets DATABASE_URL=churnops-database-url:latest
+            --set-secrets DATABASE_URL=churnops-database-url:latest,BATCH_API_KEY=churnops-batch-key:latest

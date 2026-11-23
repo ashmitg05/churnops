@@ -9,6 +9,7 @@ Shifts (all configurable in params.yaml -> simulate):
 
 import argparse
 import json
+import os
 
 import numpy as np
 import pandas as pd
@@ -52,7 +53,12 @@ def main() -> None:
     size = p["serving"]["max_batch"]
     probs: list[float] = []
     for i in range(0, len(records), size):
-        r = requests.post(f"{a.api}/predict/batch", json=records[i : i + size], timeout=120)
+        r = requests.post(
+            f"{a.api}/predict/batch",
+            json=records[i : i + size],
+            headers={"X-API-Key": os.environ.get("BATCH_API_KEY", "")},
+            timeout=120,
+        )
         r.raise_for_status()
         probs += [x["churn_probability"] for x in r.json()]
     print(

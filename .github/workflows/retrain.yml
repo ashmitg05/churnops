@@ -29,8 +29,11 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt
+      # Untrusted text goes through env, never interpolated into the script (injection-safe).
       - name: Reason
-        run: echo "Retrain reason: ${{ inputs.reason || 'schedule' }}"
+        env:
+          REASON: ${{ inputs.reason || 'schedule' }}
+        run: echo "Retrain reason: $REASON"
       - name: Pull data + current production model
         run: dvc remote default gcs && dvc pull
       - name: Run pipeline (only changed stages rebuild)
@@ -44,13 +47,15 @@ jobs:
           path: reports/
       - name: Version promoted model
         if: steps.promote.outputs.promoted == 'true'
+        env:
+          REASON: ${{ inputs.reason || 'schedule' }}
         run: |
           dvc add models/model.joblib
           dvc push
           git config user.name "churnops-bot"
           git config user.email "churnops-bot@users.noreply.github.com"
           git add models/model.joblib.dvc dvc.lock reports/promotion.json reports/metrics.json reports/model_comparison.md
-          git commit -m "chore: promote model (${{ inputs.reason || 'schedule' }})"
+          git commit -m "chore: promote model ($REASON)"
           git push
 
   deploy:

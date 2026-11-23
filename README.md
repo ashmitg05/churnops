@@ -147,7 +147,7 @@ gcloud iam workload-identity-pools create github --location=global
 gcloud iam workload-identity-pools providers create-oidc github --location=global --workload-identity-pool=github \
   --issuer-uri=https://token.actions.githubusercontent.com \
   --attribute-mapping=google.subject=assertion.sub,attribute.repository=assertion.repository \
-  --attribute-condition="assertion.repository=='$REPO'"
+  --attribute-condition="assertion.repository=='$REPO' && assertion.ref=='refs/heads/main'"
 POOL=$(gcloud iam workload-identity-pools describe github --location=global --format='value(name)')
 gcloud iam service-accounts add-iam-policy-binding $SA --role=roles/iam.workloadIdentityUser \
   --member="principalSet://iam.googleapis.com/$POOL/attribute.repository/$REPO"
@@ -155,7 +155,7 @@ printf '%s' "$NEON_URL" | gcloud secrets create churnops-database-url --data-fil
 dvc remote modify gcs url gs://$PROJECT-churnops-dvc && dvc remote default gcs && dvc push
 ```
 
-GitHub repo **variables**: `GCP_PROJECT_ID`, `GCP_REGION`, `WIF_PROVIDER` (`$POOL/providers/github`), `WIF_SERVICE_ACCOUNT`. **Secret**: `DATABASE_URL` (for `monitor.yml`). The `attribute-condition` means only this repo can impersonate the service account. No JSON key exists anywhere.
+GitHub repo **variables**: `GCP_PROJECT_ID`, `GCP_REGION`, `WIF_PROVIDER` (`$POOL/providers/github`), `WIF_SERVICE_ACCOUNT`. **Secret**: `DATABASE_URL` (for `monitor.yml`). The `attribute-condition` means only workflows running on this repo's `main` branch can impersonate the service account (feature branches and forks cannot). No JSON key exists anywhere.
 
 ⚠️ **Set a GCP budget alert before the first deploy** (Billing → Budgets & alerts). Cloud Run is capped at `--max-instances 2`.
 

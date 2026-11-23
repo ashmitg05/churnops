@@ -1,5 +1,6 @@
 """FastAPI serving the baked production artifact (models/model.joblib)."""
 
+import hmac
 import json
 import os
 from collections.abc import AsyncIterator
@@ -8,7 +9,7 @@ from typing import Any
 
 import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import ROOT, load_params
@@ -77,7 +78,21 @@ def predict(customer: Customer) -> Prediction:  # type: ignore[valid-type]
     return predict_records([customer.model_dump()])[0]  # type: ignore[attr-defined]
 
 
-@app.post("/predict/batch", response_model=list[Prediction])
+def require_batch_key(x_api_key: str | None = Header(default=None)) -> None:
+    """Batch scoring is costly (SHAP per row) and writes to the monitoring log: key-gated.
+
+    Unset BATCH_API_KEY = open (local dev). Set it on Cloud Run.
+    """
+    expected = os.environ.get("BATCH_API_KEY")
+    if expected and not (x_api_key and hmac.compare_digest(x_api_key, expected)):
+        raise HTTPException(401, "missing or invalid X-API-Key")
+
+
+@app.post(
+    "/predict/batch",
+    response_model=list[Prediction],
+    dependencies=[Depends(require_batch_key)],
+)
 def predict_batch(customers: list[Customer]) -> list[Prediction]:  # type: ignore[valid-type]
     if not customers:
         raise HTTPException(422, "empty batch")
